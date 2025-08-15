@@ -3,6 +3,7 @@ import FAQSection from "@/components/FAQSection";
 import HeroSection from "@/components/HeroSection";
 import MarketingSection from "@/components/MarketingSection";
 import CoachesSection from "@/components/CoachesSection";
+import SuccessStories from "@/components/SuccessStories";
 
 export default function Home() {
   return (
@@ -12,6 +13,7 @@ export default function Home() {
       {/* <MarketingSection /> */}
       <FAQSection />
       <CoachesSection />
+      <SuccessStories />
     </main>
   );
 }
