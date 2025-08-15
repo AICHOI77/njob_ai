@@ -20,72 +20,60 @@ export default function CoachCard({
       onClick={onClick}
     >
       {/* Gradient Overlay */}
-      <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-[50%] w-full bg-gradient-to-b from-transparent to-violet-400/40" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-neutral-900/90 via-neutral-900/35 to-violet-800/30" />
 
       {/* Mentor Image */}
-      <div
-        className={`absolute top-10 aspect-[3/4] w-[312px] transition-all duration-800 ${isActive ? "-left-16 md:-left-5" : "-left-16"} `}
-      >
-        <div className="relative size-full">
+      <div className="absolute inset-y-6 left-4 w-[60%] transition-all duration-800 sm:left-6 sm:w-[56%] md:left-8 md:w-[54%] xl:left-10 xl:w-[50%]">
+        <div className="relative size-full rounded-xl ring-1 ring-white/10 shadow-2xl bg-neutral-900/40">
           <Image
             src={coach.profile_image || ""}
             alt={coach.name}
             fill
-            className="pointer-events-none h-full object-cover select-none"
             sizes="100vw"
+            className="pointer-events-none h-full w-full select-none object-contain"
           />
         </div>
       </div>
 
       {/* Content */}
       <div
-        className={`absolute inset-y-0 right-0 left-[40%] p-10 opacity-100 transition-all duration-800 md:left-[50%] xl:right-auto xl:left-[40%] ${
-          isActive ? "xl:opacity-100" : "xl:opacity-0"
-        } `}
+        className={`absolute inset-y-0 right-0 z-20 px-6 py-8 md:px-10
+        left-[62%] sm:left-[60%] md:left-[58%] xl:left-[54%]
+        transition-all duration-800 ${isActive ? "xl:opacity-100" : "xl:opacity-0"}`}
       >
-        <div className="flex flex-col items-start gap-3">
-          {/* Name with underline */}
-          <div className="relative z-10">
+        <div className="flex h-full flex-col gap-6">
+          <div className="relative w-fit">
             <h3 className="text-2xl font-semibold">{coach.name}</h3>
-            <div className="absolute -bottom-px left-0 -z-10 h-3 w-full bg-violet-700" />
+            <div className="absolute -bottom-px left-0 h-2 w-full rounded bg-gradient-to-r from-violet-600 to-fuchsia-500" />
           </div>
 
           {/* Specialty and Achievements */}
-          <h4 className="font-semibold">{coach.bio}</h4>
-          <div className="space-y-2 text-sm">
-            <ul className="list-inside list-disc">
+          <div className="space-y-3 flex-1">
+            <h4 className="font-semibold">{coach.bio}</h4>
+            <ul className="list-inside list-disc text-sm">
               {coach.career.split("\n").map((line, index) => (
                 <li key={index}>{line}</li>
               ))}
             </ul>
           </div>
-        </div>
-      </div>
 
-      {/* Learn More Button */}
-      <div
-        className={`absolute bottom-12 left-[40%] whitespace-nowrap transition-all duration-800 ${
-          isActive ? "xl:left-[60%]" : "xl:left-5"
-        } `}
-      >
-        <Link href={`/coach/${coach.id}`} className="flex items-center gap-3">
-          <span
-            className={`w-[100px] opacity-100 transition-all duration-800 ${
-              isActive ? "xl:opacity-100" : "xl:w-0 xl:opacity-0"
-            } `}
+          {/* Learn More Button */}
+          <Link
+            href={`/coach/${coach.id}`}
+            className="group inline-flex items-center gap-3 self-end mt-6"
           >
-            강사 더 알아보기
-          </span>
-          <div
-            className={`flex aspect-square size-10 items-center justify-center rounded-full border stroke-1 p-1 transition-all duration-800 ${
-              isActive
-                ? "rotate-[270deg] border-slate-700 bg-slate-700"
-                : "border-white bg-transparent"
-            } `}
-          >
-            <ArrowDownRight className="h-5 w-5" />
-          </div>
-        </Link>
+            <span className="text-white/90">강사 더 알아보기</span>
+            <div
+              className={`flex aspect-square size-10 items-center justify-center rounded-full border stroke-1 p-1 transition-all duration-300 ${
+                isActive
+                  ? "border-slate-700 bg-slate-700 group-hover:scale-105"
+                  : "border-white/70 bg-white/10 backdrop-blur-sm group-hover:scale-105"
+              }`}
+            >
+              <ArrowDownRight className="h-5 w-5" />
+            </div>
+          </Link>
+        </div>
       </div>
     </div>
   );
