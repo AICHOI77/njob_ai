@@ -276,7 +276,7 @@ export default function LectureModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-black">
         <div
           className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6"
           onClick={(e) => e.stopPropagation()}
