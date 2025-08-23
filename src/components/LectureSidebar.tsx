@@ -59,14 +59,17 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
   return (
     <div className="h-fit lg:sticky lg:top-8">
       <aside className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-5 text-white shadow-sm">
+        {/* Coach chip */}
         <div className="mb-3 flex flex-wrap gap-2">
           <span className="rounded-full border px-4 py-1 text-sm font-semibold text-[var(--accent)] border-[var(--accent)]">
             {lecture.coach.name}
           </span>
         </div>
 
+        {/* Title */}
         <h3 className="mb-5 text-xl font-bold">{lecture.title}</h3>
 
+        {/* Info */}
         <div className="space-y-2 border-b border-white/10 pb-5">
           <div className="flex justify-between text-sm">
             <span className="font-semibold text-white/70">강의정보</span>
@@ -78,6 +81,7 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
           </div>
         </div>
 
+        {/* Price / Discount */}
         <div className="mt-5">
           {price === 0 ? (
             <div className="flex items-baseline justify-between">
@@ -127,12 +131,14 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
         {/* CTA */}
         <button
           onClick={onCtaClick}
+          disabled={disabled}
           className={`mt-4 w-full rounded-xl px-5 py-4 text-center text-base font-extrabold transition
             ${
               disabled
-                ? "bg-[var(--accent)]/40 text-white/40 glow"
+                ? "cursor-not-allowed bg-[var(--accent)]/40 text-white/40 glow"
                 : "bg-[var(--accent)] text-white hover:bg-[var(--accent)] active:bg-[var(--accent)] glow"
             }`}
+            aria-disabled={disabled}
         >
           {ctaLabel}
         </button>
