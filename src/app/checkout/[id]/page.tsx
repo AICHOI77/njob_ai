@@ -59,7 +59,7 @@ export default function CheckoutPage() {
     }
   }, [loading, status, id, router]);
 
-  const rawPrice = lecture?.price ?? lecture?.amount ?? 0;
+  const rawPrice = lecture?.price ?? "0";
   const price = toNumber(rawPrice);
   const discount = 0;
   const total = useMemo(() => Math.max(0, price - discount), [price, discount]);

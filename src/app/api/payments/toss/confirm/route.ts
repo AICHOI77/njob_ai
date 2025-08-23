@@ -1,59 +1,79 @@
-
-export const runtime = "nodejs"; // Node 런타임 보장 (Buffer 등 사용)
+// src/app/api/payments/toss/confirm/route.ts
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY!; // test_sk_... 또는 live_sk_...
-
-console.log("Supabase_url:  ", SUPABASE_URL);
-console.log("SUPABASE_SERVICE_ROLE_KEY:  ", SUPABASE_SERVICE_ROLE_KEY);
-console.log("TOSS_SECRET_KEY:  ", TOSS_SECRET_KEY);
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-
-function badRequest(message: string, status = 400) {
+function bad(message: string, status = 400) {
   return NextResponse.json({ message }, { status });
 }
 
 export async function POST(req: Request) {
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
+
+  console.log("[toss/confirm] env", {
+    hasUrl: !!SUPABASE_URL,
+    hasServiceRole: !!SUPABASE_SERVICE_ROLE_KEY,
+    hasSecret: !!TOSS_SECRET_KEY,
+  });
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return bad("Server Supabase env missing (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).", 500);
+  }
+  if (!TOSS_SECRET_KEY) {
+    return bad("TOSS_SECRET_KEY is missing.", 500);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+
   try {
-    const { paymentKey, orderId, amount } = (await req.json()) as {
+    const { paymentKey, orderId, amount } = (await req.json().catch(() => ({}))) as {
       paymentKey?: string;
       orderId?: string;
       amount?: number;
     };
 
+    console.log("[toss/confirm] incoming", { paymentKey: !!paymentKey, orderId, amount });
+
     if (!paymentKey || !orderId || typeof amount !== "number") {
-      return badRequest("필수 파라미터가 누락되었습니다: paymentKey, orderId, amount");
+      return bad("필수 파라미터가 누락되었습니다: paymentKey, orderId, amount");
     }
 
-    // 1) 주문 조회 및 금액 검증
+    // 1) Find order and validate amount/status
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .select("id, order_id, amount_expected, status, tenant_id, user_id")
       .eq("order_id", orderId)
       .single();
 
-    if (orderErr || !order) {
-      return badRequest("주문을 찾을 수 없습니다");
-    }
+    console.log("[toss/confirm] order lookup", {
+      error: orderErr?.message,
+      found: !!order,
+      id: order?.id,
+      status: order?.status,
+      amount_expected: order?.amount_expected,
+    });
+
+    if (orderErr || !order) return bad("주문을 찾을 수 없습니다");
 
     if (order.status !== "pending") {
       if (order.status === "paid") {
-        // 멱등성 보장: 이미 결제 완료 상태면 OK 반환
         return NextResponse.json({ ok: true, alreadyConfirmed: true });
       }
-      return badRequest(`유효하지 않은 주문 상태: ${order.status}`);
+      return bad(`유효하지 않은 주문 상태: ${order.status}`);
     }
 
     if (Number(order.amount_expected) !== Number(amount)) {
-      return badRequest("주문 금액이 일치하지 않습니다");
+      return bad("주문 금액이 일치하지 않습니다");
     }
 
-    // 2) TossPayments 결제 확인 호출
+    // 2) Confirm with Toss
+    console.log("[toss/confirm] calling Toss API /payments/confirm");
     const auth = Buffer.from(`${TOSS_SECRET_KEY}:`).toString("base64");
     const confirmRes = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
       method: "POST",
@@ -66,7 +86,14 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    const confirmData = await confirmRes.json();
+    const confirmData = await confirmRes.json().catch(() => ({}));
+    console.log("[toss/confirm] toss response", {
+      status: confirmRes.status,
+      ok: confirmRes.ok,
+      code: confirmData?.code,
+      message: confirmData?.message,
+    });
+
     if (!confirmRes.ok) {
       await supabase.from("payments").insert({
         provider: "toss",
@@ -78,7 +105,7 @@ export async function POST(req: Request) {
       return NextResponse.json(confirmData, { status: confirmRes.status });
     }
 
-    // 3) 결제 성공 처리: payments 기록 + 주문 상태 업데이트
+    // 3) Record payment + mark order paid
     const approvedAt = confirmData?.approvedAt ?? new Date().toISOString();
 
     const { error: payErr } = await supabase.from("payments").insert({
@@ -89,42 +116,17 @@ export async function POST(req: Request) {
       approved_at: approvedAt,
       raw_json: confirmData,
     });
-    if (payErr) {
-      return badRequest("결제 기록 저장에 실패했습니다");
-    }
+    if (payErr) return bad("결제 기록 저장에 실패했습니다", 500);
 
     const { error: updErr } = await supabase
       .from("orders")
       .update({ status: "paid", paid_at: approvedAt })
       .eq("id", order.id);
-    if (updErr) {
-      return badRequest("주문 업데이트에 실패했습니다");
-    }
-
-    // 4) 강의 접근 권한 생성 (6개월)
-    const { data: items, error: itemsErr } = await supabase
-      .from("order_items")
-      .select("course_id")
-      .eq("order_id", order.id);
-
-    if (!itemsErr && items && items.length > 0) {
-      const start = new Date();
-      const end = new Date();
-      end.setMonth(end.getMonth() + 6);
-
-      const accessRows = items.map((it: any) => ({
-        user_id: order.user_id,
-        course_id: it.course_id,
-        tenant_id: order.tenant_id,
-        start_at: start.toISOString(),
-        end_at: end.toISOString(),
-      }));
-
-      await supabase.from("course_access").insert(accessRows);
-    }
+    if (updErr) return bad("주문 업데이트에 실패했습니다", 500);
 
     return NextResponse.json({ ok: true, payment: confirmData });
   } catch (e: any) {
-    return NextResponse.json({ message: e?.message || "서버 오류" }, { status: 500 });
+    console.error("[toss/confirm] exception", e);
+    return bad(e?.message || "서버 오류", 500);
   }
 }
