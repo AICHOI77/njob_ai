@@ -5,6 +5,8 @@ import InfoModal from "@/components/InfoModal";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useLectureApply } from "@/hooks/useLectureApply";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
   const {
@@ -12,9 +14,11 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
     setModalStatus,
     isLoading,
     handleLogin,
-    handleApplyClick,
     isApplied,
   } = useLectureApply(lecture.id);
+
+  const { status } = useSession();
+  const router = useRouter();
 
   const timeLeft = useCountdownTimer(lecture.start_date);
   const isExpired =
@@ -23,7 +27,6 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
     timeLeft.minutes === 0 &&
     timeLeft.seconds === 0;
 
-  // Pricing helpers
   const price = (lecture as any).price ?? 0;
   const originalPrice: number | undefined = (lecture as any).original_price;
   const hasDiscount = typeof originalPrice === "number" && originalPrice > price;
@@ -44,20 +47,26 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
       : "무료강의 신청하기"
     : "강의 구매하기";
 
+  const onCtaClick = () => {
+    const target = `/checkout/${lecture.id}`;
+    if (status === "authenticated") {
+      router.push(target);
+    } else {
+      router.push(`/login?callbackUrl=${encodeURIComponent(target)}`);
+    }
+  };
+
   return (
     <div className="h-fit lg:sticky lg:top-8">
       <aside className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-5 text-white shadow-sm">
-        {/* Coach chip */}
         <div className="mb-3 flex flex-wrap gap-2">
           <span className="rounded-full border px-4 py-1 text-sm font-semibold text-[var(--accent)] border-[var(--accent)]">
             {lecture.coach.name}
           </span>
         </div>
 
-        {/* Title */}
         <h3 className="mb-5 text-xl font-bold">{lecture.title}</h3>
 
-        {/* Info */}
         <div className="space-y-2 border-b border-white/10 pb-5">
           <div className="flex justify-between text-sm">
             <span className="font-semibold text-white/70">강의정보</span>
@@ -69,7 +78,6 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
           </div>
         </div>
 
-        {/* Price / Discount */}
         <div className="mt-5">
           {price === 0 ? (
             <div className="flex items-baseline justify-between">
@@ -116,17 +124,15 @@ export function LectureSidebar({ lecture }: { lecture: LectureWithCoach }) {
           )}
         </div>
 
-        {/* CTA (Blue) */}
+        {/* CTA */}
         <button
-          onClick={handleApplyClick}
-          disabled={disabled}
+          onClick={onCtaClick}
           className={`mt-4 w-full rounded-xl px-5 py-4 text-center text-base font-extrabold transition
             ${
               disabled
-                ? "cursor-not-allowed bg-[var(--accent)]/40 text-white/40 glow"
+                ? "bg-[var(--accent)]/40 text-white/40 glow"
                 : "bg-[var(--accent)] text-white hover:bg-[var(--accent)] active:bg-[var(--accent)] glow"
             }`}
-          aria-disabled={disabled}
         >
           {ctaLabel}
         </button>
