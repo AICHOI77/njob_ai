@@ -7,7 +7,6 @@ import Image from "next/image";
 import { lecturesApi } from "@/app/api/lectures";
 import { LectureSidebar } from "@/components/LectureSidebar";
 import { LectureWithCoach } from "@/types/lectures";
-import { MobileFloatingBar } from "@/components/MobileFloatingBar";
 import { useLectureApply } from "@/hooks/useLectureApply";
 
 export default function CourseDetailPage() {
@@ -166,12 +165,6 @@ export default function CourseDetailPage() {
           </div>
         </div>
       </section>
-
-      <MobileFloatingBar
-        lecture={lecture}
-        onApplyClick={handleApplyClick}
-        isLoading={isLoading}
-      />
     </>
   );
 }
