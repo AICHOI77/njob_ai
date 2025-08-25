@@ -5,6 +5,9 @@ import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 // --- Admin client (bypasses RLS; access is gated by session) ---
 function admin() {
   return createClient(
@@ -35,7 +38,16 @@ type ReadingOutput = {
   hour_pillar?: string;
 };
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (_openai) return _openai;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+  _openai = new OpenAI({ apiKey });
+  return _openai;
+}
 
 // --- Util: prompt to JSON with a strict schema expectation ---
 async function generateReading(payload: z.infer<typeof ReadingInput>): Promise<ReadingOutput> {
@@ -66,6 +78,8 @@ async function generateReading(payload: z.infer<typeof ReadingInput>): Promise<R
   "hour_pillar": "미상"
 }
 `;
+
+  const openai = getOpenAI();
 
   // Prefer models that support JSON mode. gpt-4o-mini is cheap/fast and supports response_format.
   const completion = await openai.chat.completions.create({
