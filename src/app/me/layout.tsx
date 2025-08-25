@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "./sidebar/page";
+import Sidebar from "./components/Sidebar";
 
 export default function MeLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -14,19 +14,11 @@ export default function MeLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Sidebar mobile (drawer) */}
-      <div
-        className={`fixed inset-0 z-40 md:hidden transition ${
-          open ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-      >
-        {/* Backdrop */}
+      <div className={`fixed inset-0 z-40 md:hidden transition ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
         <div
-          className={`absolute inset-0 bg-black/50 transition-opacity ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 bg-black/50 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
           onClick={() => setOpen(false)}
         />
-        {/* Panel */}
         <div
           className={`absolute top-0 left-0 h-full w-72 bg-[#151515] border-r border-neutral-800 transform transition-transform ${
             open ? "translate-x-0" : "-translate-x-full"

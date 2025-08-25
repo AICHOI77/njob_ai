@@ -48,7 +48,7 @@ async function handleSubmit() {
       gender: (form.gender || "M") as "M" | "F",
       question: form.question.trim(),
     };
-    const r = await fetch("/api/reading", {
+    const r = await fetch("/api/me/reading", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft, Calendar, Clock, MessageSquare, Star
-} from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MessageSquare, Star } from "lucide-react";
 
 type SessionRow = {
   id: string;
@@ -24,28 +23,28 @@ type SessionRow = {
   };
 };
 
-export default function ReadingDetailPage({
-  params,
-}: { params: { id: string } }) {
+export default function ReadingDetailPage() {
+  const routeParams = useParams(); // ✅ côté client
+  const id = Array.isArray(routeParams?.id) ? routeParams.id[0] : (routeParams?.id as string | undefined);
+
   const [row, setRow] = useState<SessionRow | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) return;
     (async () => {
       try {
-        const r = await fetch(`/api/sessions/${params.id}`, { cache: "no-store" });
+        const r = await fetch(`/api/sessions/${id}`, { cache: "no-store" });
         const j = await r.json();
         setRow(r.ok ? j : null);
       } finally {
         setLoading(false);
       }
     })();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#141414] text-white p-6">불러오는 중…</div>
-    );
+    return <div className="min-h-screen bg-[#141414] text-white p-6">불러오는 중…</div>;
   }
 
   if (!row) {
@@ -74,12 +73,10 @@ export default function ReadingDetailPage({
   return (
     <div className="min-h-screen bg-[#141414] text-white">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-8">
-        {/* Back */}
         <Link href="/me" className="inline-flex items-center gap-2 text-neutral-300 mb-6">
           <ArrowLeft className="w-4 h-4" /> 대시보드로 돌아가기
         </Link>
 
-        {/* Header */}
         <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{name}님의 사주 세션</h1>
         <div className="flex flex-wrap items-center gap-4 text-neutral-400 mb-6">
           <div className="inline-flex items-center gap-1">
@@ -186,7 +183,6 @@ function StatusBadge({ status }: { status: "created"|"processing"|"done"|"error"
 }
 
 function formatKoreanDate(isoOrMdY: string) {
-  // support "YYYY-MM-DD" or "MM/DD/YYYY"
   if (!isoOrMdY) return "-";
   const mdy = isoOrMdY.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   let d: Date;

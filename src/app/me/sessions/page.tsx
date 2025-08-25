@@ -78,7 +78,7 @@ export default function SessionsPage() {
             <p className="text-neutral-400 mt-2">모든 사주 읽기 세션을 관리하고 확인하세요.</p>
           </div>
           <Link
-            href="/reading/new"
+            href="/me/reading/new"
             className="inline-flex items-center gap-2 rounded-xl bg-[#E50914] border border-red-700 px-4 py-2 font-semibold hover:brightness-110"
           >
             <Plus className="w-4 h-4" /> 새 사주 읽기
@@ -160,7 +160,7 @@ export default function SessionsPage() {
                       <td className="text-neutral-400">{new Date(row.created_at).toLocaleString()}</td>
                       <td className="text-right pr-6">
                         <Link
-                          href={`/reading/${row.id}`}
+                          href={`/me/reading/${row.id}`}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-700 hover:bg-neutral-800"
                         >
                           <Eye className="w-4 h-4" /> 보기

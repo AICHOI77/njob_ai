@@ -21,7 +21,6 @@ const isUuid = (s: unknown): s is string =>
 async function findAuthUserIdByEmail(db: ReturnType<typeof getDbAdmin>, email: string) {
   let page = 1;
   for (;;) {
-    // @ts-expect-error: admin
     const { data, error } = await (db as any).auth.admin.listUsers({ page, perPage: 1000 });
     if (error) throw error;
     const found = (data.users ?? []).find(
@@ -145,7 +144,7 @@ async function ensureProfileAndTenant(args: {
   if (addErr) console.error("[nextauth] add membership error:", addErr);
 }
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
   logger: {
