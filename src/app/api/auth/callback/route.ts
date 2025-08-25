@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // server-only
       {
         cookies: {
           getAll() {
@@ -24,9 +24,7 @@ export async function GET(request: NextRequest) {
                 cookieStore.set(name, value, options),
               );
             } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
+              // Called from a Server Component -> ignore
             }
           },
         },
@@ -39,13 +37,12 @@ export async function GET(request: NextRequest) {
     if (!error && sessionData?.session) {
       const { session } = sessionData;
 
-      // 카카오 로그인인 경우 사용자 정보 가져오기
+      // 1) If Kakao: try to enrich the profile (non-blocking for the rest)
       if (
         session.user.app_metadata?.provider === "kakao" &&
         session.provider_token
       ) {
         try {
-          // 카카오 사용자 정보 가져오기
           const kakaoResponse = await fetch(
             "https://kapi.kakao.com/v2/user/me",
             {
@@ -60,34 +57,31 @@ export async function GET(request: NextRequest) {
 
             const updates: { phone_number?: string; name?: string } = {};
 
-            // 전화번호 추출 및 포맷팅
             if (kakaoData.kakao_account?.phone_number) {
-              updates.phone_number = formatPhoneNumberToKorean(kakaoData.kakao_account.phone_number);
+              updates.phone_number = formatPhoneNumberToKorean(
+                kakaoData.kakao_account.phone_number,
+              );
             }
-
-            // 이름 추출
             if (kakaoData.kakao_account?.name) {
               updates.name = kakaoData.kakao_account.name;
             }
 
-            // 필수 정보가 없으면 에러 발생
             if (!updates.name || !updates.phone_number) {
-              console.error(
-                "Critical: Missing required user info from Kakao:",
-                {
-                  kakaoAccount: kakaoData.kakao_account,
-                  properties: kakaoData.properties,
-                  updates: updates,
-                },
-              );
+              console.error("Critical: Missing required user info from Kakao:", {
+                kakaoAccount: kakaoData.kakao_account,
+                properties: kakaoData.properties,
+                updates: updates,
+              });
 
-              // 에러 페이지로 리다이렉트
+              // Redirect to a dedicated error page if missing info
               return NextResponse.redirect(
-                `${requestUrl.origin}/error?message=${encodeURIComponent("카카오 계정에서 필수 정보(이름, 전화번호)를 가져올 수 없습니다. 카카오 계정 설정을 확인해주세요.")}`,
+                `${requestUrl.origin}/error?message=${encodeURIComponent(
+                  "카카오 계정에서 필수 정보(이름, 전화번호)를 가져올 수 없습니다. 카카오 계정 설정을 확인해주세요.",
+                )}`,
               );
             }
 
-            // profiles 테이블에 데이터 저장
+            // Upsert profil
             const profileData = {
               id: session.user.id,
               email: session.user.email || "",
@@ -101,19 +95,64 @@ export async function GET(request: NextRequest) {
               .upsert(profileData)
               .select();
 
-            // TODO 에러 핸들링 공통 분리
             if (profileError) {
               console.error("Profile upsert error:", profileError);
             } else {
-              console.log(
-                "Profile created/updated successfully:",
-                profileResult,
-              );
+              console.log("Profile created/updated successfully:", profileResult);
             }
           }
-        } catch (error) {
-          console.error("Failed to fetch Kakao user info:", error);
+        } catch (e) {
+          console.error("Failed to fetch Kakao user info:", e);
         }
+      }
+
+      // 2) Auto-tenant & membership — execute whatever happens after login
+      try {
+        const { data: hasMember, error: mErr } = await supabase
+          .from("tenant_members")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .limit(1);
+
+        const alreadyMember = !!hasMember && hasMember.length > 0;
+
+        if (!mErr && !alreadyMember) {
+          // Fallbacks strong for workspace name
+          const userMeta: any = session.user.user_metadata || {};
+          const workspaceBase =
+            (userMeta.name as string) ||
+            (userMeta.full_name as string) ||
+            (session.user.email?.split("@")[0] as string) ||
+            "내";
+
+          const workspaceName = `${workspaceBase} 워크스페이스`;
+
+          // 1) Create a tenant
+          const { data: tenant, error: tErr } = await supabase
+            .from("tenants")
+            .insert({ name: workspaceName })
+            .select("id")
+            .single();
+
+          if (tErr) throw tErr;
+
+          // 2) Add the member OWNER
+          const { error: addErr } = await supabase.from("tenant_members").insert({
+            tenant_id: tenant.id,
+            user_id: session.user.id,
+            email: session.user.email ?? "",
+            role: "OWNER",
+          });
+
+          if (addErr) throw addErr;
+
+          console.log("Tenant & membership bootstrapped:", {
+            user: session.user.id,
+            tenant: (tenant as any)?.id,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to create tenant/membership:", e);
       }
     }
   }
