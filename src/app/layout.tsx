@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/app/QueryProvider";
-import GlobalHeader from "@/components/GlobalHeader";
+import HeaderGate from "@/components/HeaderGate";
 import AuthSessionProvider from "@/app/AuthSessionProvider";
 
 const geistSans = Geist({
@@ -31,7 +31,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className="antialiased bg-black">
         <AuthSessionProvider>
           <QueryProvider>
-            <GlobalHeader />
+            <HeaderGate />
             {children}
           </QueryProvider>
         </AuthSessionProvider>
