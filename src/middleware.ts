@@ -26,13 +26,17 @@ export async function middleware(req: NextRequest) {
   if (!isProtected) return NextResponse.next();
 
   // 1) direct NextAuth cookie presence (works whether JWT or DB sessions)
-  const hasSecureNextAuth = req.cookies.has("__Secure-next-auth.session-token");
-  const hasDevNextAuth = req.cookies.has("next-auth.session-token");
-  const hasNextAuthCookie = hasSecureNextAuth || hasDevNextAuth;
+  //    Be tolerant of prefixes/suffixes (e.g., chunked cookies or __Secure- prefix)
+  const cookieNames = req.cookies.getAll().map((c) => c.name);
+  const hasAnyNextAuth = cookieNames.some((n) => n.includes("next-auth.session-token"));
+  const hasSecureNextAuth = cookieNames.includes("__Secure-next-auth.session-token");
+  const hasDevNextAuth = cookieNames.includes("next-auth.session-token");
+  const hasNextAuthCookie = hasAnyNextAuth || hasSecureNextAuth || hasDevNextAuth;
 
   if (hasNextAuthCookie) {
     const res = NextResponse.next();
-    res.headers.set("x-auth-debug", "allow:nextauth-cookie");
+  res.headers.set("x-auth-debug", "allow:nextauth-cookie");
+  res.headers.set("x-auth-cookies", cookieNames.join(","));
     res.headers.set("x-auth-time", `${Date.now() - t0}ms`);
     console.log(
       JSON.stringify({

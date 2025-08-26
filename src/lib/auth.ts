@@ -124,6 +124,24 @@ async function ensureProfileAndTenant(args: {
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
+  // Ensure cookies are marked Secure in production and optionally set domain for custom domains
+  useSecureCookies: process.env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        // If you use a custom domain or subdomains in production, set NEXTAUTH_COOKIE_DOMAIN (e.g. .example.com)
+        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
+      },
+    },
+  },
   logger: {
     error(code, meta) { console.error("[nextauth:error]", code, meta); },
     warn(code) { console.warn("[nextauth:warn]", code); },
