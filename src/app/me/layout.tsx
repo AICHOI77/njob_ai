@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Sidebar from "./components/Sidebar";
+import Protected from "./components/Protected";
 
 export default function MeLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +31,9 @@ export default function MeLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex-1 flex min-w-0 flex-col">
-        <main className="flex-1">{children}</main>
+        <Protected>
+          <main className="flex-1">{children}</main>
+        </Protected>
       </div>
     </div>
   );
