@@ -1,35 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import Sidebar from "./Sidebar";
 
-// If you have an AuthContext, uncomment the following line and adapt the hook name:
-// import { useAuth } from "@/context/AuthContext";
+export default function ClientShell({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
 
-export default function Protected({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [ready, setReady] = useState(false);
+  return (
+    <div className="min-h-screen bg-[#141414] text-white flex">
+      {/* Sidebar desktop */}
+      <aside className="hidden md:block w-64 shrink-0 border-r border-neutral-800">
+        <Sidebar />
+      </aside>
 
-  // const { isAuthenticated } = useAuth(); // <-- if you have it
-  const isAuthenticated = false; // replaced by fallback below
+      {/* Sidebar mobile (drawer) */}
+      <div className={`fixed inset-0 z-40 md:hidden transition ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
+        <div
+          className={`absolute inset-0 bg-black/50 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setOpen(false)}
+        />
+        <div
+          className={`absolute top-0 left-0 h-full w-72 bg-[#151515] border-r border-neutral-800 transform transition-transform ${
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <Sidebar onNavigate={() => setOpen(false)} />
+        </div>
+      </div>
 
-  useEffect(() => {
-  // 1) priority to context if you use it
-  // if (isAuthenticated) { setReady(true); return; }
-
-  // 2) fallback: token in localStorage or sessionStorage
-    const hasToken =
-      typeof window !== "undefined" &&
-      (localStorage.getItem("token") || sessionStorage.getItem("token"));
-
-    if (!isAuthenticated && !hasToken) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-    } else {
-      setReady(true);
-    }
-  }, [isAuthenticated, pathname, router]);
-
-  if (!ready) return null; // or a spinner
-  return <>{children}</>;
+      {/* Main */}
+      <div className="flex-1 flex min-w-0 flex-col">
+        <main className="flex-1">{children}</main>
+      </div>
+    </div>
+  );
 }
