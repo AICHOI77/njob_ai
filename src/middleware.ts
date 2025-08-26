@@ -1,35 +1,37 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { createSupabaseMiddlewareClient } from "@/utils/supabase-middleware";
 
-export async function middleware(request: NextRequest) {
-  const { supabase, response } = createSupabaseMiddlewareClient(request);
-  const { pathname, search } = request.nextUrl;
-
-  if (pathname.startsWith("/admin/login")) {
-    return response;
-  }
+export async function middleware(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
 
   if (
-    pathname.startsWith("/admin") ||
-    pathname === "/me" ||
-    pathname.startsWith("/me/")
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/api/auth")
   ) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
-      const loginUrl = new URL(loginPath, request.url);
-      loginUrl.searchParams.set("redirect", pathname + search);
-      return NextResponse.redirect(loginUrl);
-    }
+    return NextResponse.next();
   }
 
-  return response;
+  // Protège /me, /me/* et /admin/*
+  const isProtected =
+    pathname === "/me" || pathname.startsWith("/me/") || pathname.startsWith("/admin");
+  if (!isProtected) return NextResponse.next();
+
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (token) return NextResponse.next(); // utilisateur authentifié via NextAuth
+
+  const { supabase, response } = createSupabaseMiddlewareClient(req);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) return response;
+
+  const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
+  const url = new URL(loginPath, req.url);
+  url.searchParams.set("redirect", pathname + search);
+  return NextResponse.redirect(url);
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/me/:path*"],
+  matcher: ["/me", "/me/:path*", "/admin/:path*"],
 };
