@@ -42,8 +42,6 @@ const AGENTS: Agent[] = [
 
 const CATEGORIES = ["전체","금융 자동화","수익 창출","개인 금융","투자","리셀","커머스","마케팅","콘텐츠"] as const;
 
-const AuthButton = dynamic(() => import("@/components/AuthButton"), { ssr: false });
-
 export default function Home() {
   const [query, setQuery] = useState("");
   const [isCompanyInfoOpen, setIsCompanyInfoOpen] = useState(false);

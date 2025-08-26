@@ -2,72 +2,104 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, PlusCircle, Users, Settings } from "lucide-react";
+import { BarChart2, Activity, Settings, User2, X, PlusCircle } from "lucide-react";
+import dynamic from "next/dynamic";
 
-function NavItem({
-  href, label, icon, active, onClick,
+const AuthButton = dynamic(() => import("@/components/AuthButton"), { ssr: false });
+
+export default function Sidebar({
+  onNavigate,
+  onClose, // called by the ✕ button
 }: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  active?: boolean;
-  onClick?: () => void;
+  onNavigate?: () => void;
+  onClose?: () => void;
 }) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={`group flex items-center gap-3 px-3 py-2 rounded-xl border transition
-        ${active ? "border-neutral-700 bg-neutral-900"
-                 : "border-transparent hover:border-neutral-800 hover:bg-black/30"}`}
-    >
-      <span className="w-5 h-5 opacity-90">{icon}</span>
-      <span className="text-sm">{label}</span>
-    </Link>
-  );
-}
-
-export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const items = [
-    { href: "/me", label: "대시보드", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { href: "/me/sessions", label: "세션 관리", icon: <FileText className="w-5 h-5" /> },
-    { href: "/me/reading/new", label: "사주 읽기", icon: <PlusCircle className="w-5 h-5" /> },
-    // { href: "/me/users", label: "사용자", icon: <Users className="w-5 h-5" /> },
-    // { href: "/me/settings", label: "설정", icon: <Settings className="w-5 h-5" /> },
-  ];
+
+  const NavItem = ({
+    icon,
+    label,
+    href,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    href: string;
+  }) => {
+    const active = href === "/me" ? pathname === "/me" : pathname?.startsWith(href);
+    return (
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className={`flex items-center gap-3 px-3 py-3 md:py-2 rounded-xl text-sm transition-colors border ${
+          active ? "bg-zinc-800/70 border-zinc-700" : "border-transparent hover:bg-zinc-800/60"
+        }`}
+      >
+        {icon}
+        <span>{label}</span>
+      </Link>
+    );
+  };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Brand */}
-      <div className="px-4 py-4 border-b border-neutral-800">
-        <Link href="/me" className="inline-flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[#E50914] flex items-center justify-center font-bold">AI</div>
+    <aside className="w-full h-full flex flex-col bg-[#151515] text-white">
+      {/* Brand + Close (mobile only) */}
+      <div className="h-16 px-4 flex items-center justify-between border-b border-neutral-800">
+        <Link href="/me" onClick={onNavigate} className="inline-flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold">AI</div>
           <div className="leading-tight">
-            <div className="font-extrabold">AI 사주 에이전트</div>
-            <div className="text-[11px] text-neutral-400">Admin Console</div>
+            <div className="font-semibold">AI 사주 에이전트</div>
+            <div className="text-xs text-neutral-400">관리자 패널</div>
           </div>
         </Link>
+
+        {/* ✕ close */}
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={onClose ?? onNavigate}
+          className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 hover:bg-neutral-900"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Nav */}
-      <div className="flex-1 p-3 space-y-1">
-        {items.map((it) => (
-          <NavItem
-            key={it.href}
-            href={it.href}
-            label={it.label}
-            icon={it.icon}
-            active={it.href === "/me" ? pathname === "/me" : pathname?.startsWith(it.href)}
-            onClick={onNavigate}
-          />
-        ))}
+      <div className="flex-1 overflow-y-auto p-3 space-y-6">
+        <div>
+          <div className="px-3 text-xs uppercase tracking-wide text-neutral-500">주요 기능</div>
+          <div className="mt-2 space-y-1">
+            <NavItem icon={<BarChart2 className="h-4 w-4" />} label="대시보드" href="/me" />
+            <NavItem icon={<Activity className="h-4 w-4" />} label="세션 관리" href="/me/sessions" />
+            {/* NEW: 사주 읽기 -> /me/reading/new */}
+            <NavItem icon={<PlusCircle className="h-4 w-4" />} label="사주 읽기" href="/me/reading/new" />
+          </div>
+        </div>
+
+        <div>
+          <div className="px-3 text-xs uppercase tracking-wide text-neutral-500">시스템 관리</div>
+          <div className="mt-2 space-y-1">
+            <NavItem icon={<Settings className="h-4 w-4" />} label="설정" href="/me/settings" />
+          </div>
+        </div>
+        <div>
+          <div className="px-3 text-xs uppercase tracking-wide text-neutral-500">사용자</div>
+          <div className="mt-2 space-y-1">
+            <AuthButton />
+          </div>
+        </div>
       </div>
+      
 
       {/* Footer */}
-      <div className="p-3 border-t border-neutral-800">
-        <div className="text-xs text-neutral-400">© {new Date().getFullYear()} wol1000.ai</div>
+      <div className="p-4 border-t border-neutral-800 flex items-center gap-3">
+        <div className="h-10 w-10 rounded-full bg-neutral-800 flex items-center justify-center">
+          <User2 className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-sm font-medium">관리자</div>
+          <div className="text-xs text-neutral-400">Admin User</div>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 }
