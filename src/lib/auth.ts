@@ -1,5 +1,4 @@
-export const runtime = "nodejs";
-
+// src/lib/auth/options.ts
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Kakao from "next-auth/providers/kakao";
@@ -7,32 +6,18 @@ import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import { formatPhoneNumberToKorean } from "@/utils/phoneNumber";
 
+// ---- helpers admin db ----
 function getDbAdmin() {
   const url = process.env.SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   if (!url || !key) throw new Error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
   return createClient(url, key, { auth: { persistSession: false } });
 }
-
 const isUuid = (s: unknown): s is string =>
   typeof s === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
-async function findAuthUserIdByEmail(db: ReturnType<typeof getDbAdmin>, email: string) {
-  let page = 1;
-  for (;;) {
-    const { data, error } = await (db as any).auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) throw error;
-    const found = (data.users ?? []).find(
-      (u: any) => u.email?.toLowerCase() === email.toLowerCase()
-    );
-    if (found) return found.id as string;
-    if ((data.users?.length ?? 0) < 1000) break;
-    page++;
-  }
-  return null;
-}
-
+// ---- link OAuth account -> app user (auth_users/auth_accounts) ----
 async function ensureUserForOAuth(params: {
   provider: string;
   providerAccountId: string;
@@ -42,54 +27,48 @@ async function ensureUserForOAuth(params: {
 }): Promise<string | null> {
   const db = getDbAdmin();
   const { provider, providerAccountId, email, name, avatarUrl } = params;
-  if (!email) {
-    console.error("[oauth] missing email");
-    return null;
-  }
 
-  // 1) ensure auth.users
-  let authId = await findAuthUserIdByEmail(db, email);
-  if (!authId) {
-    const { data, error } = await db.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { name, avatar_url: avatarUrl ?? null },
-    });
-    if (error) {
-      console.error("[createUser]", error.message);
-      return null;
-    }
-    authId = data.user?.id ?? null;
-  }
-  if (!authId) return null;
+  const { data: acc } = await db
+    .from("auth_accounts")
+    .select("user_id")
+    .eq("provider", provider)
+    .eq("provider_account_id", providerAccountId)
+    .maybeSingle();
+  if (acc?.user_id) return acc.user_id;
 
-  // 2) upsert public.auth_users with id = authId (FK to auth.users)
-  {
-    const { error } = await db
+  let userId: string | null = null;
+  if (email) {
+    const { data: u } = await db.from("auth_users").select("id").eq("email", email).maybeSingle();
+    if (u?.id) userId = u.id;
+  }
+  if (!userId) {
+    const { data: ins, error: insErr } = await db
       .from("auth_users")
-      .upsert({ id: authId, email, name, avatar_url: avatarUrl ?? null }, { onConflict: "id" });
-    if (error) {
-      console.error("[upsert auth_users]", error.message);
+      .insert({
+        email: email ?? null,
+        name: name ?? null,
+        avatar_url: avatarUrl ?? null,
+      })
+      .select("id")
+      .single();
+    if (insErr) {
+      console.error("[nextauth] create auth_users error:", insErr);
       return null;
     }
+    userId = ins?.id ?? null;
   }
-
-  // 3) link auth_accounts (idempotent)
-  {
-    const { error } = await db
+  if (userId) {
+    const { error: linkErr } = await db
       .from("auth_accounts")
-      .upsert(
-        { user_id: authId, provider, provider_account_id: String(providerAccountId) },
-        { onConflict: "provider,provider_account_id" }
-      );
-    if (error && (error as any).code !== "23505") {
-      console.warn("[link account]", error.message);
+      .insert({ user_id: userId, provider, provider_account_id: String(providerAccountId) });
+    if (linkErr && linkErr.code !== "23505") {
+      console.warn("[nextauth] link account warning:", linkErr.message);
     }
   }
-
-  return authId;
+  return userId;
 }
 
+// ---- ensure profile + tenant/membership on first login ----
 async function ensureProfileAndTenant(args: {
   userId: string;
   email?: string | null;
@@ -129,22 +108,20 @@ async function ensureProfileAndTenant(args: {
     .insert({ name: workspaceName })
     .select("id")
     .single();
-
   if (tErr || !tenant?.id) {
     console.error("[nextauth] create tenant error:", tErr);
     return;
   }
-
   const { error: addErr } = await db.from("tenant_members").insert({
     tenant_id: tenant.id,
-    user_id: args.userId,
+    user_id: userId,
     email: email ?? "",
     role: "OWNER",
   });
   if (addErr) console.error("[nextauth] add membership error:", addErr);
 }
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
   logger: {
@@ -173,17 +150,12 @@ const authOptions: NextAuthOptions = {
             .select("id, email, password_hash, name, avatar_url")
             .eq("email", email)
             .maybeSingle();
-
           if (error || !user?.password_hash) return null;
+
           const ok = await bcrypt.compare(credentials.password, user.password_hash);
           if (!ok) return null;
 
-          return {
-            id: String(user.id),
-            email: user.email,
-            name: user.name ?? null,
-            image: user.avatar_url ?? null,
-          };
+          return { id: String(user.id), email: user.email, name: user.name ?? null, image: user.avatar_url ?? null };
         } catch (e) {
           console.error("[auth] authorize exception", e);
           return null;
@@ -194,11 +166,7 @@ const authOptions: NextAuthOptions = {
     Kakao({
       clientId: process.env.KAKAO_CLIENT_ID!,
       clientSecret: process.env.KAKAO_CLIENT_SECRET || "",
-      authorization: {
-        params: {
-          scope: "profile_nickname profile_image account_email name phone_number",
-        },
-      },
+      authorization: { params: { scope: "profile_nickname profile_image account_email" } },
       allowDangerousEmailAccountLinking: true,
       profile(p: any) {
         const acct = p?.kakao_account ?? {};
@@ -218,6 +186,11 @@ const authOptions: NextAuthOptions = {
     async jwt({ token, user, account, profile }) {
       if ((token as any).uuid && isUuid((token as any).uuid)) return token;
 
+      if (user?.id && isUuid(String(user.id))) {
+        (token as any).uuid = String(user.id);
+        return token;
+      }
+
       if (account?.provider && account?.providerAccountId) {
         const uuid = await ensureUserForOAuth({
           provider: account.provider,
@@ -227,11 +200,6 @@ const authOptions: NextAuthOptions = {
           avatarUrl: user?.image ?? (profile as any)?.picture ?? null,
         });
         if (uuid) (token as any).uuid = uuid;
-        return token;
-      }
-
-      if (user?.id && isUuid(String(user.id))) {
-        (token as any).uuid = String(user.id);
       }
       return token;
     },
@@ -274,7 +242,9 @@ const authOptions: NextAuthOptions = {
               const raw = data?.kakao_account?.phone_number as string | undefined;
               if (raw) phone = formatPhoneNumberToKorean(raw);
             }
-          } catch {}
+          } catch (e) {
+            console.warn("[nextauth] kakao phone fetch failed:", (e as Error)?.message);
+          }
         }
 
         await ensureProfileAndTenant({
@@ -289,6 +259,3 @@ const authOptions: NextAuthOptions = {
     },
   },
 };
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
