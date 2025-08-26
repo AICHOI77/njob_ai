@@ -33,8 +33,8 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/me", label: "대시보드", icon: <LayoutDashboard className="w-5 h-5" /> },
     { href: "/me/sessions", label: "세션 관리", icon: <FileText className="w-5 h-5" /> },
     { href: "/me/reading/new", label: "사주 읽기", icon: <PlusCircle className="w-5 h-5" /> },
-    { href: "/me/users", label: "사용자", icon: <Users className="w-5 h-5" /> },
-    { href: "/me/settings", label: "설정", icon: <Settings className="w-5 h-5" /> },
+    // { href: "/me/users", label: "사용자", icon: <Users className="w-5 h-5" /> },
+    // { href: "/me/settings", label: "설정", icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (

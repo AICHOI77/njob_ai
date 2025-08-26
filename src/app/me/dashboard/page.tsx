@@ -35,6 +35,7 @@ const pieColors = ["#ef4444", "#22c55e", "#f59e0b", "#3b82f6", "#8b5cf6"];
 export default function Dashboard() {
   const [resp, setResp] = useState<ApiResp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0); // pour 새로고침
 
   // Filters
   const [period, setPeriod] = useState("7d");
@@ -45,13 +46,19 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const qs = new URLSearchParams({ limit: "500", period, tenant });
-      const r = await fetch(`/api/sessions?${qs.toString()}`, { cache: "no-store" });
-      const j = await r.json();
-      setResp(j);
-      setLoading(false);
+      try {
+        const qs = new URLSearchParams({ limit: "500", period, tenant });
+        const r = await fetch(`/api/sessions?${qs.toString()}`, { cache: "no-store" });
+        const j = await r.json();
+        setResp(j);
+      } catch (e) {
+        console.error("Failed to load /api/sessions:", e);
+        setResp({ data: [], kpi: { todaySessions: 0, totalSessions: 0, completed: 0, processing: 0 }, totalCount: 0, page: 1, pageSize: 0 });
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, [period, tenant]);
+  }, [period, tenant, reloadKey]);
 
   // Direct KPIs from API
   const k = resp?.kpi ?? { todaySessions: 0, totalSessions: 0, completed: 0, processing: 0 };
@@ -169,7 +176,10 @@ export default function Dashboard() {
             </select>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <button className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 bg-black/40 px-3 py-2 text-sm hover:bg-black/60">
+            <button
+              onClick={() => setReloadKey((n) => n + 1)}
+              className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 bg-black/40 px-3 py-2 text-sm hover:bg-black/60"
+            >
               <RefreshCw className="h-4 w-4" /> 새로고침
             </button>
             <button className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 bg-black/40 px-3 py-2 text-sm hover:bg-black/60">
