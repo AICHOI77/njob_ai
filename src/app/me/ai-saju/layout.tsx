@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import Sidebar from "./components/Sidebar";
+import Sidebar from "../components/Sidebar";
 
 export default function MeLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);

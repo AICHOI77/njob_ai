@@ -28,7 +28,7 @@ export default function AuthButton() {
 
   return (
     <div className="shrink-0 inline-flex items-center gap-2">
-      <Link href="/me" className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/5">
+      <Link href="/me/agents" className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/5">
         {user.image ? (
           <Image
             src={user.image}

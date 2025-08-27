@@ -24,7 +24,7 @@ type SessionRow = {
 };
 
 export default function ReadingDetailPage() {
-  const routeParams = useParams(); // ✅ côté client
+  const routeParams = useParams();
   const id = Array.isArray(routeParams?.id) ? routeParams.id[0] : (routeParams?.id as string | undefined);
 
   const [row, setRow] = useState<SessionRow | null>(null);
