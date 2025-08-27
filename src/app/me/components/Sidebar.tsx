@@ -25,7 +25,7 @@ export default function Sidebar({
     label: string;
     href: string;
   }) => {
-    const active = href === "/me" ? pathname === "/me" : pathname?.startsWith(href);
+    const active = href === "/me/ai-saju" ? pathname === "/me/ai-saju" : pathname?.startsWith(href);
     return (
       <Link
         href={href}
@@ -68,17 +68,17 @@ export default function Sidebar({
         <div>
           <div className="px-3 text-xs uppercase tracking-wide text-neutral-500">주요 기능</div>
           <div className="mt-2 space-y-1">
-            <NavItem icon={<BarChart2 className="h-4 w-4" />} label="대시보드" href="/me" />
-            <NavItem icon={<Activity className="h-4 w-4" />} label="세션 관리" href="/me/sessions" />
+            <NavItem icon={<BarChart2 className="h-4 w-4" />} label="대시보드" href="/me/ai-saju" />
+            <NavItem icon={<Activity className="h-4 w-4" />} label="세션 관리" href="/me/ai-saju/sessions" />
             {/* NEW: 사주 읽기 -> /me/reading/new */}
-            <NavItem icon={<PlusCircle className="h-4 w-4" />} label="사주 읽기" href="/me/reading/new" />
+            <NavItem icon={<PlusCircle className="h-4 w-4" />} label="사주 읽기" href="/me/ai-saju/reading/new" />
           </div>
         </div>
 
         <div>
           <div className="px-3 text-xs uppercase tracking-wide text-neutral-500">시스템 관리</div>
           <div className="mt-2 space-y-1">
-            <NavItem icon={<Settings className="h-4 w-4" />} label="설정" href="/me/settings" />
+            <NavItem icon={<Settings className="h-4 w-4" />} label="설정" href="/me/ai-saju/settings" />
           </div>
         </div>
         <div>

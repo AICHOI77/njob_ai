@@ -244,10 +244,10 @@ export default function Dashboard() {
           <div className="bg-[#1a1a1a] rounded-2xl border border-neutral-800 p-4">
             <div className="text-lg font-semibold mb-4">빠른 작업</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <ActionCard title="세션 관리" desc="모든 사주 세션 보기 및 관리" icon={<Activity className="h-5 w-5" />} href="/me/sessions" />
-              <ActionCard title="새 세션 생성" desc="관리자 권한으로 새 세션 시작" icon={<Plus className="h-5 w-5" />} href="/me/reading/new" />
-              <ActionCard title="사용자 관리" desc="사용자 계정 및 권한 관리" icon={<Users className="h-5 w-5" />} href="/me/users" />
-              <ActionCard title="시스템 설정" desc="애플리케이션 설정 및 구성" icon={<CheckCircle2 className="h-5 w-5" />} href="/me/settings" />
+              <ActionCard title="세션 관리" desc="모든 사주 세션 보기 및 관리" icon={<Activity className="h-5 w-5" />} href="/me/ai-saju/sessions" />
+              <ActionCard title="새 세션 생성" desc="관리자 권한으로 새 세션 시작" icon={<Plus className="h-5 w-5" />} href="/me/ai-saju/reading/new" />
+              <ActionCard title="사용자 관리" desc="사용자 계정 및 권한 관리" icon={<Users className="h-5 w-5" />} href="/me/ai-saju/users" />
+              <ActionCard title="시스템 설정" desc="애플리케이션 설정 및 구성" icon={<CheckCircle2 className="h-5 w-5" />} href="/me/ai-saju/settings" />
             </div>
           </div>
 
