@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,12 @@ function SuccessInner() {
 
   const isFreeFlow = !!qp.orderId && !qp.paymentKey;
 
+  // Empêche les doubles exécutions (StrictMode) et satisfait ESLint (deps complètes)
+  const calledRef = useRef(false);
   useEffect(() => {
+    if (calledRef.current) return;
+    calledRef.current = true;
+
     const run = async () => {
       if (isFreeFlow) {
         setStatus("ok");
@@ -70,9 +75,9 @@ function SuccessInner() {
         setStatus("error");
       }
     };
+
     run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isFreeFlow, qp.paymentKey, qp.orderId, qp.amount]);
 
   return (
     <main className="relative min-h-screen bg-black text-white">
@@ -122,7 +127,7 @@ function SuccessInner() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <button
-                  onClick={() => router.push("/my/courses")}
+                  onClick={() => router.push("/me/agents")}
                   className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95"
                 >
                   내 강의로 가기
