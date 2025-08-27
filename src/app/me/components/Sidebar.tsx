@@ -25,7 +25,7 @@ export default function Sidebar({
     label: string;
     href: string;
   }) => {
-    const active = href === "/me" ? pathname === "/me" : pathname?.startsWith(href);
+    const active = href === "/me/ai-saju" ? pathname === "/me/ai-saju" : pathname?.startsWith(href);
     return (
       <Link
         href={href}
