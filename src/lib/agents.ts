@@ -7,6 +7,7 @@ export type Agent = {
   courseId: string;
   purchaseUrl?: string;
   openPath?: string;
+  lectureId?: number | null;
 };
 
 function uuid(i: number) {
@@ -28,6 +29,8 @@ export const AGENTS: Agent[] = [
     short: "사주 분석 & 리딩",
     courseId: "00000000-0000-0000-0000-00000000a1b2",
     openPath: "/me/ai-saju",
+    purchaseUrl: "/lecture/19",
+    lectureId: 19,
   },
   { slug: "agent-03", title: "Agent 03", short: "Copywriting", courseId: uuid(3), purchaseUrl: "/products" },
   { slug: "agent-04", title: "Agent 04", short: "SEO Booster", courseId: uuid(4), purchaseUrl: "/products" },
