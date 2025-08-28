@@ -19,16 +19,45 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // 1) Auth
+      const { data, error: signInErr } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      if (error) {
-        setError(error.message);
+      if (signInErr) {
+        setError(signInErr.message);
         return;
       }
-      if (data.user) router.push("/admin");
+      const user = data.user;
+      if (!user) {
+        setError("로그인에 실패했습니다.");
+        return;
+      }
+
+      // 2) Lire le rôle depuis profiles (id == auth.uid)
+      const { data: profile, error: profileErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileErr) {
+        // Optionnel: on peut signOut pour être propre
+        await supabase.auth.signOut();
+        setError("프로필 조회 중 오류가 발생했습니다.");
+        return;
+      }
+
+      const role = (profile?.role || "").toString().toUpperCase();
+
+      if (role !== "ADMIN") {
+        await supabase.auth.signOut(); // Bloque l'accès si non-admin
+        setError("관리자 계정만 로그인할 수 있습니다.");
+        return;
+      }
+
+      // 3) OK: rediriger vers /admin
+      router.push("/admin");
     } catch (err) {
       setError("로그인 중 오류가 발생했습니다.");
     } finally {
@@ -41,9 +70,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-white/10 bg-[#141414] p-8 text-white shadow-sm">
         <div>
           <h2 className="mt-1 text-center text-3xl font-bold text-white">관리자 로그인</h2>
-          <p className="mt-2 text-center text-sm text-white/70">
-            N잡 AI 관리자 계정으로 로그인하세요
-          </p>
+          <p className="mt-2 text-center text-sm text-white/70">N잡 AI 관리자 계정으로 로그인하세요</p>
         </div>
 
         <form className="mt-6 space-y-6" onSubmit={handleLogin}>
@@ -90,11 +117,7 @@ export default function LoginPage() {
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-white/70 hover:text-white"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
@@ -114,25 +137,9 @@ export default function LoginPage() {
             >
               {loading ? (
                 <>
-                  <svg
-                    className="mr-3 -ml-1 h-5 w-5 animate-spin text-black"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
+                  <svg className="mr-3 -ml-1 h-5 w-5 animate-spin text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   로그인 중...
                 </>

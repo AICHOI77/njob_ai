@@ -7,7 +7,7 @@ export default function HeaderGate() {
   const pathname = usePathname();
   if (!pathname) return null;
 
-  if (pathname === "/me" || pathname.startsWith("/me/")) {
+  if (pathname === "/me" || pathname.startsWith("/me/") || pathname.startsWith("/admin")) {
     return null;
   }
 
