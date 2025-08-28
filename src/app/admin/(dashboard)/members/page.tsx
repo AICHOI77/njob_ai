@@ -16,6 +16,19 @@ type Profile = {
 
 type EditDraft = Pick<Profile, "id" | "name" | "email" | "phone_number" | "role">;
 
+function formatDateKOR(dt?: string | null) {
+  if (!dt) return "-";
+  const d = new Date(dt);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function AdminMembersPage() {
   const router = useRouter();
   const [meRole, setMeRole] = useState<string>("");
@@ -30,7 +43,6 @@ export default function AdminMembersPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>("");
 
-  // Guard: only ADMIN can see the list; but we will display ALL roles
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -54,7 +66,6 @@ export default function AdminMembersPage() {
       }
       setMeRole(String(my.role).toUpperCase());
 
-      // Load ALL members (no role filter here)
       const { data, error: listErr } = await supabase
         .from("profiles")
         .select("id, email, name, phone_number, role, created_at")
@@ -71,15 +82,13 @@ export default function AdminMembersPage() {
     const s = q.trim().toLowerCase();
 
     return rows.filter((r) => {
-      // Role filter
       const role = (r.role || "").toUpperCase();
       if (roleFilter === "ADMIN" && role !== "ADMIN") return false;
       if (roleFilter === "USER" && role !== "USER") return false;
       if (roleFilter === "EMPTY" && role !== "") return false;
 
-      // Text filter
       if (!s) return true;
-      return [r.name, r.email, r.phone_number, r.role]
+      return [r.name, r.email, r.phone_number, r.role, formatDateKOR(r.created_at)]
         .map((x) => (x || "").toString().toLowerCase())
         .some((v) => v.includes(s));
     });
@@ -146,13 +155,15 @@ export default function AdminMembersPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold">Members</h1>
-            <p className="text-sm text-white/60">Admin-only. Showing <b>all roles</b>. Your role: {meRole}</p>
+            <p className="text-sm text-white/60">
+              Admin-only. Showing <b>all roles</b>. Your role: {meRole}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name / email / phone / role…"
+              placeholder="Search name / email / phone / role / date…"
               className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
             <select
@@ -183,6 +194,7 @@ export default function AdminMembersPage() {
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Phone</th>
                 <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Registered At</th>
                 <th className="px-4 py-3 w-36 text-right">Actions</th>
               </tr>
             </thead>
@@ -197,6 +209,7 @@ export default function AdminMembersPage() {
                       {(r.role || "").toUpperCase() || "-"}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-white/70">{formatDateKOR(r.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -227,7 +240,7 @@ export default function AdminMembersPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-white/60">
+                  <td colSpan={6} className="px-4 py-10 text-center text-white/60">
                     No members found.
                   </td>
                 </tr>
