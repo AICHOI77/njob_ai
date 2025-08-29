@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useKakaoAuth } from "./useKakaoAuth";
 import { supabase } from "@/utils/supabase";
@@ -6,6 +6,36 @@ import { supabase } from "@/utils/supabase";
 const SESSION_STORAGE_KEY = "funnelKakaoLoginAttempt";
 
 export function useFunnelApply() {
+  const [hasTriggeredWebhook, setHasTriggeredWebhook] = useState(false);
+
+  const triggerWebhook = useCallback(async (user: User) => {
+    if (hasTriggeredWebhook) return;
+    
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name, email, phone_number")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.name && profile?.email && profile?.phone_number) {
+      try {
+        await fetch("/api/webinar-noti", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: profile.name,
+            email: profile.email,
+            phone_number: profile.phone_number,
+          }),
+        });
+        setHasTriggeredWebhook(true);
+      } catch (error) {
+        // 웹훅 호출 실패는 무시
+      }
+    }
+  }, [hasTriggeredWebhook]);
 
   const onLoginSuccess = useCallback(
     async (user: User) => {
@@ -27,26 +57,10 @@ export function useFunnelApply() {
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
 
         // n8n 웹훅 트리거
-        if (profile?.name && profile?.email && profile?.phone_number) {
-          try {
-            await fetch("/api/webinar-noti", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                name: profile.name,
-                email: profile.email,
-                phone_number: profile.phone_number,
-              }),
-            });
-          } catch (error) {
-            // 웹훅 호출 실패는 무시 (사용자 경험에 영향 없음)
-          }
-        }
+        await triggerWebhook(user);
       }
     },
-    [],
+    [triggerWebhook],
   );
 
   const { isLoading, error, user, handleKakaoLogin } = useKakaoAuth({
@@ -55,10 +69,25 @@ export function useFunnelApply() {
     onLoginSuccess,
   });
 
+  // 이미 로그인된 사용자가 버튼을 클릭한 경우 처리
+  const handleLoginButtonClick = useCallback(async () => {
+    // 이미 로그인된 경우 직접 웹훅 트리거
+    if (user) {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, "true");
+      await triggerWebhook(user);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      // 로그인 성공 후 리다이렉트
+      window.location.href = "/detail";
+    } else {
+      // 로그인되지 않은 경우 카카오 로그인
+      handleKakaoLogin();
+    }
+  }, [user, triggerWebhook, handleKakaoLogin]);
+
   return {
     isLoading,
     error,
     user,
-    handleKakaoLogin,
+    handleKakaoLogin: handleLoginButtonClick,
   };
 }
