@@ -4,12 +4,15 @@ import { useKakaoAuth } from "./useKakaoAuth";
 import { supabase } from "@/utils/supabase";
 
 const SESSION_STORAGE_KEY = "funnelKakaoLoginAttempt";
+const WEBHOOK_TRIGGERED_KEY = "funnelWebhookTriggered";
 
 export function useFunnelApply() {
   const [hasTriggeredWebhook, setHasTriggeredWebhook] = useState(false);
 
   const triggerWebhook = useCallback(async (user: User) => {
-    if (hasTriggeredWebhook) return;
+    // 세션 스토리지에서 이미 웹훅을 트리거했는지 확인
+    const webhookTriggered = sessionStorage.getItem(`${WEBHOOK_TRIGGERED_KEY}_${user.id}`);
+    if (hasTriggeredWebhook || webhookTriggered === "true") return;
     
     const { data: profile } = await supabase
       .from("profiles")
@@ -31,6 +34,8 @@ export function useFunnelApply() {
           }),
         });
         setHasTriggeredWebhook(true);
+        // 세션 스토리지에 웹훅 트리거 상태 저장
+        sessionStorage.setItem(`${WEBHOOK_TRIGGERED_KEY}_${user.id}`, "true");
       } catch (error) {
         // 웹훅 호출 실패는 무시
       }
