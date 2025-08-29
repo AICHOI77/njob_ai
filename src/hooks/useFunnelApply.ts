@@ -74,7 +74,7 @@ export function useFunnelApply() {
   );
 
   const { isLoading, error, user, handleKakaoLogin } = useKakaoAuth({
-    additionalParams: { next: "/detail" },
+    additionalParams: { next: "/detail", funnel: "true" },
     sessionStorageKey: SESSION_STORAGE_KEY,
     onLoginSuccess,
   });

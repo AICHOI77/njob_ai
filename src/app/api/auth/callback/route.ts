@@ -99,6 +99,28 @@ export async function GET(request: NextRequest) {
               console.error("Profile upsert error:", profileError);
             } else {
               console.log("Profile created/updated successfully:", profileResult);
+              
+              // 웹훅 트리거 (funnel=true 파라미터가 있을 때만)
+              const funnel = requestUrl.searchParams.get("funnel");
+              if (funnel === "true" && profileData.name && profileData.email && profileData.phone_number) {
+                try {
+                  const webhookUrl = `${requestUrl.origin}/api/webinar-noti`;
+                  await fetch(webhookUrl, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      name: profileData.name,
+                      email: profileData.email,
+                      phone_number: profileData.phone_number,
+                    }),
+                  });
+                  console.log("Webhook triggered successfully");
+                } catch (webhookError) {
+                  console.error("Failed to trigger webhook:", webhookError);
+                }
+              }
             }
           }
         } catch (e) {
