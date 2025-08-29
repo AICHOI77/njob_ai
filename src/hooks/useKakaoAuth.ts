@@ -75,6 +75,9 @@ export function useKakaoAuth(options: KakaoAuthOptions = {}) {
   const onLoginSuccessRef = useRef(options.onLoginSuccess);
   onLoginSuccessRef.current = options.onLoginSuccess;
 
+  // 이미 콜백이 실행되었는지 추적
+  const hasCalledCallbackRef = useRef(false);
+
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -90,16 +93,22 @@ export function useKakaoAuth(options: KakaoAuthOptions = {}) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
 
-        // 로그인 성공 콜백 실행
-        if (onLoginSuccessRef.current) {
+        // SIGNED_IN 이벤트일 때만 로그인 성공 콜백 실행
+        // 그리고 한 번만 실행되도록 보장
+        if (event === 'SIGNED_IN' && onLoginSuccessRef.current && !hasCalledCallbackRef.current) {
+          hasCalledCallbackRef.current = true;
           onLoginSuccessRef.current(session.user);
         }
       } else {
         setUser(null);
+        // 로그아웃 시 콜백 상태 초기화
+        if (event === 'SIGNED_OUT') {
+          hasCalledCallbackRef.current = false;
+        }
       }
     });
 
