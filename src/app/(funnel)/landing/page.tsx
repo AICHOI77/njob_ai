@@ -54,7 +54,7 @@ export default function LandingPage() {
         </div>
         <div className="mb-5 text-center text-2xl text-white sm:mb-10">
           <span className="font-bold">무료 비밀강의 시작까지..</span>
-          <br /> (2일간 저녁 8시 시작)
+          <br /> (2일간 저녁 7시 30분 시작)
           <br />{" "}
           <span className="text-5xl font-bold">{formatTime(timeLeft)}</span>
         </div>
@@ -120,7 +120,7 @@ export default function LandingPage() {
         </div>
         <div className="mb-5 text-center text-2xl text-white sm:mb-10">
           <span className="font-bold">무료 비밀강의 시작까지..</span>
-          <br /> (2일간 저녁 8시 시작)
+          <br /> (2일간 저녁 7시 30분 시작)
           <br />{" "}
           <span className="text-5xl font-bold">{formatTime(timeLeft)}</span>
         </div>

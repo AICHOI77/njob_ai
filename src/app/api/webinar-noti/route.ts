@@ -9,36 +9,42 @@ export async function POST(request: NextRequest) {
     if (!name || !email || !phone_number) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // n8n 웹훅으로 전달
-    const response = await fetch('https://aiinfrafs.app.n8n.cloud/webhook/webinar-noti', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      "https://primary-production-0d400.up.railway.app/webhook/webinar-noti",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          phone_number,
+        }),
       },
-      body: JSON.stringify({
-        name,
-        email,
-        phone_number,
-      }),
-    });
+    );
 
     if (!response.ok) {
       return NextResponse.json(
         { error: "Failed to trigger webhook", status: response.status },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    return NextResponse.json({ success: true, message: "Webhook triggered successfully" });
+    return NextResponse.json({
+      success: true,
+      message: "Webhook triggered successfully",
+    });
   } catch (error) {
     // 오류 발생 시 무시
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
